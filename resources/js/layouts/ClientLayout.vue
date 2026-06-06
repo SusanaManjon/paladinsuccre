@@ -89,10 +89,11 @@ const menuOpen = ref(false);
 const handleLogout = async () => {
     try {
         await logout();
-        clearUser();
-        router.push({ name: 'home' });
     } catch (error) {
         console.error(error);
+    } finally {
+        clearUser();
+        router.push({ name: 'home' });
     }
 };
 </script>

@@ -123,10 +123,11 @@ const routeName = computed(() => {
 const handleLogout = async () => {
     try {
         await logout();
-        clearUser();
-        router.push({ name: 'login' });
     } catch (error) {
         console.error(error);
+    } finally {
+        clearUser();
+        router.push({ name: 'login' });
     }
 };
 </script>

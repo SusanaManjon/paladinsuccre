@@ -94,9 +94,17 @@ const handleRegister = async () => {
     errors.value = {};
     
     try {
-        await register(form);
-        await fetchUser();
-        const { isAdmin, isClient } = useAuth();
+        const { data } = await register(form);
+        // Guardar el token Bearer para futuras peticiones
+        if (data.token) {
+            localStorage.setItem('auth_token', data.token);
+        }
+        const { setUser, isAdmin, isClient } = useAuth();
+        if (data.user) {
+            setUser(data.user, data.token);
+        } else {
+            await fetchUser();
+        }
         if (isAdmin.value) {
             router.push({ name: 'admin.dashboard' });
         } else if (isClient.value) {

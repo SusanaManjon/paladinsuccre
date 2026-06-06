@@ -47,6 +47,14 @@ class Category extends Model
 
     public function getImageUrlAttribute()
     {
-        return $this->image ? asset('storage/' . $this->image) : null;
+        if (!$this->image) {
+            return null;
+        }
+
+        if (\Illuminate\Support\Str::startsWith($this->image, 'http')) {
+            return $this->image;
+        }
+
+        return asset('storage/' . $this->image);
     }
 }

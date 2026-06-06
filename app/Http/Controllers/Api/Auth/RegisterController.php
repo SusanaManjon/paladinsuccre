@@ -38,11 +38,11 @@ class RegisterController extends Controller
             'address'  => $request->address,
         ]);
 
-        Auth::login($user);
-        $request->session()->regenerate();
+        $token = $user->createToken('spa-token')->plainTextToken;
 
         return response()->json([
             'message' => 'Cuenta creada correctamente.',
+            'token'   => $token,
             'user'    => [
                 'id'      => $user->id,
                 'name'    => $user->name,

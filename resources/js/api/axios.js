@@ -1,20 +1,19 @@
 import axios from 'axios';
-import { useAuth } from '../stores/auth.js';
 
 const api = axios.create({
     baseURL: '/api',
-    withCredentials: true,
+    withCredentials: false,
     headers: {
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
     }
 });
 
-// Interceptor para agregar CSRF token si está disponible en el meta tag
+// Interceptor para agregar el Bearer token de Sanctum
 api.interceptors.request.use(config => {
-    const token = document.head.querySelector('meta[name="csrf-token"]');
+    const token = localStorage.getItem('auth_token');
     if (token) {
-        config.headers['X-CSRF-TOKEN'] = token.content;
+        config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
 });
@@ -24,8 +23,9 @@ api.interceptors.response.use(
     response => response,
     error => {
         if (error.response && error.response.status === 401) {
-            const { clearUser } = useAuth();
-            clearUser();
+            // Token inválido o expirado: limpiar y redirigir
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
             const path = window.location.pathname;
             if (path.startsWith('/cliente') || path.startsWith('/admin')) {
                 window.location.href = '/login';

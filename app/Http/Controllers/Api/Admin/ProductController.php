@@ -63,7 +63,7 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('products', 'public');
+            $data['image'] = cloudinary()->upload($request->file('image')->getRealPath(), ['folder' => 'products'])->getSecurePath();
         }
 
         $data['slug'] = Str::slug($data['name']);
@@ -100,10 +100,10 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            if ($product->image) {
+            if ($product->image && !\Illuminate\Support\Str::startsWith($product->image, 'http')) {
                 Storage::disk('public')->delete($product->image);
             }
-            $data['image'] = $request->file('image')->store('products', 'public');
+            $data['image'] = cloudinary()->upload($request->file('image')->getRealPath(), ['folder' => 'products'])->getSecurePath();
         }
 
         if (isset($data['name']) && $data['name'] !== $product->name) {
@@ -123,7 +123,7 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        if ($product->image) {
+        if ($product->image && !\Illuminate\Support\Str::startsWith($product->image, 'http')) {
             Storage::disk('public')->delete($product->image);
         }
 

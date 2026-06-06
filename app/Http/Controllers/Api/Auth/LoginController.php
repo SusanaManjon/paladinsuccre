@@ -25,12 +25,15 @@ class LoginController extends Controller
             ], 401);
         }
 
-        $request->session()->regenerate();
-
         $user = Auth::user();
+
+        // Revocar tokens anteriores y crear uno nuevo
+        $user->tokens()->delete();
+        $token = $user->createToken('spa-token')->plainTextToken;
 
         return response()->json([
             'message' => 'Sesión iniciada correctamente.',
+            'token'   => $token,
             'user'    => [
                 'id'      => $user->id,
                 'name'    => $user->name,
@@ -44,9 +47,8 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        // Revocar el token actual
+        $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Sesión cerrada correctamente.']);
     }
