@@ -7,30 +7,30 @@ const AdminLayout = () => import('../layouts/AdminLayout.vue');
 const ClientLayout = () => import('../layouts/ClientLayout.vue');
 
 // Public Pages
-const HomePage = () => import('../pages/public/HomePage.vue');
-const CatalogPage = () => import('../pages/public/CatalogPage.vue');
-const ProductDetailPage = () => import('../pages/public/ProductDetailPage.vue');
+const HomePage = () => import('../Pages/public/HomePage.vue');
+const CatalogPage = () => import('../Pages/public/CatalogPage.vue');
+const ProductDetailPage = () => import('../Pages/public/ProductDetailPage.vue');
 
 // Auth Pages
-const LoginPage = () => import('../pages/auth/LoginPage.vue');
-const RegisterPage = () => import('../pages/auth/RegisterPage.vue');
+const LoginPage = () => import('../Pages/auth/LoginPage.vue');
+const RegisterPage = () => import('../Pages/auth/RegisterPage.vue');
 
 // Admin Pages
-const AdminDashboard = () => import('../pages/admin/AdminDashboard.vue');
-const ProductsList = () => import('../pages/admin/ProductsList.vue');
-const ProductFormPage = () => import('../pages/admin/ProductFormPage.vue');
-const CategoriesList = () => import('../pages/admin/CategoriesList.vue');
-const CategoryFormPage = () => import('../pages/admin/CategoryFormPage.vue');
-const UsersList = () => import('../pages/admin/UsersList.vue');
-const UserFormPage = () => import('../pages/admin/UserFormPage.vue');
-const OrdersList = () => import('../pages/admin/OrdersList.vue');
+const AdminDashboard = () => import('../Pages/admin/AdminDashboard.vue');
+const ProductsList = () => import('../Pages/admin/ProductsList.vue');
+const ProductFormPage = () => import('../Pages/admin/ProductFormPage.vue');
+const CategoriesList = () => import('../Pages/admin/CategoriesList.vue');
+const CategoryFormPage = () => import('../Pages/admin/CategoryFormPage.vue');
+const UsersList = () => import('../Pages/admin/UsersList.vue');
+const UserFormPage = () => import('../Pages/admin/UserFormPage.vue');
+const OrdersList = () => import('../Pages/admin/OrdersList.vue');
 
 // Client Pages
-const ClientDashboard = () => import('../pages/client/ClientDashboard.vue');
-const CartPage = () => import('../pages/client/CartPage.vue');
-const CheckoutPage = () => import('../pages/client/CheckoutPage.vue');
-const OrdersPage = () => import('../pages/client/OrdersPage.vue');
-const ProfilePage = () => import('../pages/client/ProfilePage.vue');
+const ClientDashboard = () => import('../Pages/client/ClientDashboard.vue');
+const CartPage = () => import('../Pages/client/CartPage.vue');
+const CheckoutPage = () => import('../Pages/client/CheckoutPage.vue');
+const OrdersPage = () => import('../Pages/client/OrdersPage.vue');
+const ProfilePage = () => import('../Pages/client/ProfilePage.vue');
 
 export const routes = [
     {
