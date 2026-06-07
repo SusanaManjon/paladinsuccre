@@ -89,11 +89,12 @@ class OrderController extends Controller
             }
 
             $status = 'pending';
+            $paymentStatus = 'pending';
             $notes = $request->notes;
 
             if ($request->payment_method === 'paypal' && $request->paypal_transaction_id) {
                 $status = 'confirmed';
-                $notes = ($notes ? $notes . "\n\n" : "") . "[Pago confirmado vía PayPal. ID Transacción: " . $request->paypal_transaction_id . "]";
+                $paymentStatus = 'paid';
             }
 
             $order = Order::create([
@@ -103,6 +104,9 @@ class OrderController extends Controller
                 'shipping_address' => $request->shipping_address,
                 'phone'            => $request->phone,
                 'notes'            => $notes,
+                'payment_method'   => $request->payment_method,
+                'payment_status'   => $paymentStatus,
+                'transaction_id'   => $request->paypal_transaction_id,
             ]);
 
             foreach ($orderItems as $itemData) {
@@ -113,6 +117,7 @@ class OrderController extends Controller
 
             return response()->json([
                 'message'      => 'Pedido creado correctamente.',
+                'id'           => $order->id,
                 'order_number' => $order->order_number,
                 'total'        => $order->total,
             ], 201);
@@ -130,16 +135,19 @@ class OrderController extends Controller
             ->findOrFail($id);
 
         return response()->json([
-            'id'               => $order->id,
-            'order_number'     => $order->order_number,
-            'status'           => $order->status,
-            'status_label'     => $order->status_label,
-            'total'            => $order->total,
-            'notes'            => $order->notes,
-            'shipping_address' => $order->shipping_address,
-            'phone'            => $order->phone,
-            'created_at'       => $order->created_at->format('d/m/Y H:i'),
-            'items'            => $order->items->map(fn($item) => [
+            'id'                => $order->id,
+            'order_number'      => $order->order_number,
+            'status'            => $order->status,
+            'status_label'      => $order->status_label,
+            'total'             => $order->total,
+            'notes'             => $order->notes,
+            'shipping_address'  => $order->shipping_address,
+            'phone'             => $order->phone,
+            'created_at'        => $order->created_at->format('d/m/Y H:i'),
+            'payment_method'    => $order->payment_method,
+            'payment_status'    => $order->payment_status,
+            'payment_proof_url' => $order->payment_proof_url,
+            'items'             => $order->items->map(fn($item) => [
                 'id'         => $item->id,
                 'quantity'   => $item->quantity,
                 'unit_price' => $item->unit_price,
@@ -152,5 +160,27 @@ class OrderController extends Controller
                 ],
             ]),
         ]);
+    }
+
+    public function uploadPaymentProof(Request $request, string $id)
+    {
+        $request->validate([
+            'payment_proof' => 'required|mimes:jpeg,png,jpg,gif,webp,heic,pdf|max:20480', // 20MB max, allow heic and pdf
+        ]);
+
+        $order = Order::where('user_id', $request->user()->id)->findOrFail($id);
+
+        if ($request->hasFile('payment_proof')) {
+            $path = $request->file('payment_proof')->store('payments', 'public');
+            $order->payment_proof = $path;
+            $order->save();
+
+            return response()->json([
+                'message' => 'Comprobante subido correctamente.',
+                'payment_proof_url' => $order->payment_proof_url,
+            ]);
+        }
+
+        return response()->json(['message' => 'Error al subir el comprobante.'], 500);
     }
 }

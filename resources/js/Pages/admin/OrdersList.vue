@@ -86,6 +86,52 @@
           </div>
         </div>
 
+        <!-- Admin Payment Section -->
+        <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h4 class="font-bold text-blue-900">Validación de Pago</h4>
+              <p class="text-xs text-blue-800">
+                Método: <span class="font-bold uppercase">{{ selectedOrder.payment_method }}</span>
+                | Estado: <span class="font-bold uppercase">{{ selectedOrder.payment_status === 'paid' ? 'PAGADO' : 'PENDIENTE' }}</span>
+              </p>
+              <div v-if="selectedOrder.transaction_id" class="text-xs text-blue-800 mt-1">
+                ID PayPal: {{ selectedOrder.transaction_id }}
+              </div>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+              <a v-if="selectedOrder?.payment_proof_url" :href="selectedOrder.payment_proof_url" target="_blank" class="text-blue-600 text-sm hover:underline font-medium">
+                Ver Comprobante
+              </a>
+              <div v-else-if="selectedOrder?.payment_method === 'qr'" class="flex items-center gap-2">
+                 <!-- Admin Upload UI -->
+                 <div class="mt-4 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center" :class="{'bg-blue-50 border-blue-300': selectedFile}">
+                    <input type="file" id="adminProofUpload" @change="handleFileUpload" accept="image/*,.pdf,.heic" class="hidden">
+                    <label for="adminProofUpload" class="cursor-pointer block">
+                      <div class="mt-4 flex text-sm text-gray-600 justify-center">
+                        <span class="relative bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none">
+                          Selecciona un archivo
+                        </span>
+                      </div>
+                      <p class="text-xs text-gray-500 mt-2">Fotos, capturas o PDF hasta 20MB</p>
+                    </label>
+                 </div>
+                 
+                 <button v-if="selectedFile" @click="uploadProof" :disabled="uploadingProof" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-xs font-medium transition flex items-center gap-1">
+                    {{ uploadingProof ? '...' : 'Guardar' }}
+                 </button>
+              </div>
+              
+              <button 
+                v-if="selectedOrder?.payment_status !== 'paid'" 
+                @click="verifyPayment" 
+                :disabled="verifyingPayment" 
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition ml-2"
+              >
+                 {{ verifyingPayment ? '...' : 'Aprobar Pago' }}
+              </button>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div class="bg-gray-50 p-4 rounded-lg">
             <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Información del Cliente</h4>
@@ -100,15 +146,17 @@
           </div>
         </div>
 
-        <h4 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Artículos ({{ selectedOrder.items?.length }})</h4>
+        <h4 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Artículos ({{ selectedOrder?.items?.length }})</h4>
         <ul class="divide-y divide-gray-200 mb-6 max-h-64 overflow-y-auto pr-2">
-          <li v-for="item in selectedOrder.items" :key="item.id" class="py-3 flex justify-between">
+          <li v-for="item in selectedOrder?.items" :key="item.id" class="py-3 flex justify-between">
             <div class="flex items-center gap-3">
-              <img v-if="item.product.image_url" :src="item.product.image_url" class="w-12 h-12 rounded object-cover">
-              <div v-else class="w-12 h-12 bg-gray-200 rounded"></div>
+              <img v-if="item.product?.image_url" :src="item.product.image_url" class="w-12 h-12 rounded object-cover">
+              <div v-else class="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-400">
+                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+              </div>
               <div>
-                <p class="text-sm font-bold text-gray-900">{{ item.product.name }}</p>
-                <p class="text-xs text-gray-500">{{ item.quantity }} x Bs. {{ item.unit_price }} ({{ item.product.weight }})</p>
+                <p class="text-sm font-bold text-gray-900">{{ item.product?.name || 'Producto Eliminado' }}</p>
+                <p class="text-xs text-gray-500">{{ item.quantity }} x Bs. {{ item.unit_price }} {{ item.product?.weight ? '(' + item.product.weight + ')' : '' }}</p>
               </div>
             </div>
             <div class="font-bold text-gray-900">Bs. {{ item.subtotal }}</div>
@@ -126,7 +174,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { getAdminOrders, getAdminOrder, updateOrderStatus } from '../../api/orders.js';
+import { getAdminOrders, getAdminOrder, updateOrderStatus, verifyAdminPayment, uploadAdminPaymentProof } from '../../api/orders.js';
 import StatusBadge from '../../components/common/StatusBadge.vue';
 import Pagination from '../../components/common/Pagination.vue';
 import Modal from '../../components/common/Modal.vue';
@@ -142,6 +190,37 @@ const selectedOrder = ref(null);
 
 const updateStatusValue = ref('');
 const updatingStatus = ref(false);
+const verifyingPayment = ref(false);
+
+// Upload logic
+const selectedFile = ref(null);
+const uploadingProof = ref(false);
+
+const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    selectedFile.value = file;
+};
+
+const uploadProof = async () => {
+    if (!selectedFile.value || !selectedOrder.value) return;
+
+    uploadingProof.value = true;
+    const formData = new FormData();
+    formData.append('payment_proof', selectedFile.value);
+
+    try {
+        const { data } = await uploadAdminPaymentProof(selectedOrder.value.id, formData);
+        selectedOrder.value.payment_proof_url = data.payment_proof_url;
+        selectedFile.value = null;
+        alert('¡Comprobante subido correctamente!');
+        fetchOrders(meta.value?.current_page || 1);
+    } catch (e) {
+        console.error(e);
+        alert('Error al subir el comprobante. Asegúrate de que sea un archivo válido (menor a 20MB).');
+    } finally {
+        uploadingProof.value = false;
+    }
+};
 
 const fetchOrders = async (page = 1) => {
     loading.value = true;
@@ -176,6 +255,7 @@ const closeModal = () => {
     setTimeout(() => {
         selectedOrder.value = null;
         updateStatusValue.value = '';
+        selectedFile.value = null;
     }, 300);
 };
 
@@ -192,6 +272,25 @@ const updateStatus = async () => {
         alert('Error al actualizar el estado');
     } finally {
         updatingStatus.value = false;
+    }
+};
+
+const verifyPayment = async () => {
+    if (!confirm('¿Estás seguro de que deseas verificar este pago? Esta acción no se puede deshacer.')) return;
+    
+    verifyingPayment.value = true;
+    try {
+        const { data } = await verifyAdminPayment(selectedOrder.value.id);
+        selectedOrder.value.payment_status = data.payment_status;
+        selectedOrder.value.status = data.status;
+        updateStatusValue.value = data.status;
+        alert(data.message);
+        fetchOrders(meta.value?.current_page || 1);
+    } catch (e) {
+        console.error(e);
+        alert(e.response?.data?.message || 'Error al verificar el pago');
+    } finally {
+        verifyingPayment.value = false;
     }
 };
 

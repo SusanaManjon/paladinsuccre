@@ -35,16 +35,20 @@ class OrderController extends Controller
         $order = Order::with(['user', 'items.product'])->findOrFail($id);
 
         return response()->json([
-            'id'               => $order->id,
-            'order_number'     => $order->order_number,
-            'status'           => $order->status,
-            'status_label'     => $order->status_label,
-            'total'            => $order->total,
-            'notes'            => $order->notes,
-            'shipping_address' => $order->shipping_address,
-            'phone'            => $order->phone,
-            'created_at'       => $order->created_at->format('d/m/Y H:i'),
-            'user'             => ['id' => $order->user?->id, 'name' => $order->user?->name, 'email' => $order->user?->email],
+            'id'                => $order->id,
+            'order_number'      => $order->order_number,
+            'status'            => $order->status,
+            'status_label'      => $order->status_label,
+            'total'             => $order->total,
+            'notes'             => $order->notes,
+            'shipping_address'  => $order->shipping_address,
+            'phone'             => $order->phone,
+            'created_at'        => $order->created_at->format('d/m/Y H:i'),
+            'payment_method'    => $order->payment_method,
+            'payment_status'    => $order->payment_status,
+            'transaction_id'    => $order->transaction_id,
+            'payment_proof_url' => $order->payment_proof_url,
+            'user'              => ['id' => $order->user?->id, 'name' => $order->user?->name, 'email' => $order->user?->email],
             'items'            => $order->items->map(fn($item) => [
                 'id'         => $item->id,
                 'quantity'   => $item->quantity,
@@ -83,14 +87,59 @@ class OrderController extends Controller
     private function format(Order $o): array
     {
         return [
-            'id'           => $o->id,
-            'order_number' => $o->order_number,
-            'status'       => $o->status,
-            'status_label' => $o->status_label,
-            'total'        => $o->total,
-            'items_count'  => $o->items_count ?? 0,
-            'created_at'   => $o->created_at->format('d/m/Y H:i'),
-            'user'         => ['name' => $o->user?->name, 'email' => $o->user?->email],
+            'id'             => $o->id,
+            'order_number'   => $o->order_number,
+            'status'         => $o->status,
+            'status_label'   => $o->status_label,
+            'total'          => $o->total,
+            'items_count'    => $o->items_count ?? 0,
+            'created_at'     => $o->created_at->format('d/m/Y H:i'),
+            'user'           => ['name' => $o->user?->name, 'email' => $o->user?->email],
+            'payment_method' => $o->payment_method,
+            'payment_status' => $o->payment_status,
         ];
+    }
+
+    public function verifyPayment(Request $request, string $id)
+    {
+        $order = Order::findOrFail($id);
+
+        if ($order->payment_status === 'paid') {
+            return response()->json(['message' => 'El pago ya ha sido verificado.'], 400);
+        }
+
+        $order->update([
+            'payment_status' => 'paid',
+            'status'         => 'confirmed', // Optionally change order status
+        ]);
+
+        return response()->json([
+            'message'        => 'Pago verificado exitosamente.',
+            'payment_status' => $order->payment_status,
+            'status'         => $order->status,
+            'status_label'   => $order->status_label,
+        ]);
+    }
+
+    public function uploadPaymentProof(Request $request, string $id)
+    {
+        $request->validate([
+            'payment_proof' => 'required|mimes:jpeg,png,jpg,gif,webp,heic,pdf|max:20480', // 20MB max, allow heic and pdf
+        ]);
+
+        $order = Order::findOrFail($id);
+
+        if ($request->hasFile('payment_proof')) {
+            $path = $request->file('payment_proof')->store('payments', 'public');
+            $order->payment_proof = $path;
+            $order->save();
+
+            return response()->json([
+                'message' => 'Comprobante subido correctamente.',
+                'payment_proof_url' => $order->payment_proof_url,
+            ]);
+        }
+
+        return response()->json(['message' => 'Error al subir el comprobante.'], 500);
     }
 }

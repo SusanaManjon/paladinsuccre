@@ -63,7 +63,7 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $data['image'] = cloudinary()->upload($request->file('image')->getRealPath(), ['folder' => 'products'])->getSecurePath();
+            $data['image'] = $request->file('image')->store('products', 'public');
         }
 
         $data['slug'] = Str::slug($data['name']);
@@ -103,7 +103,7 @@ class ProductController extends Controller
             if ($product->image && !\Illuminate\Support\Str::startsWith($product->image, 'http')) {
                 Storage::disk('public')->delete($product->image);
             }
-            $data['image'] = cloudinary()->upload($request->file('image')->getRealPath(), ['folder' => 'products'])->getSecurePath();
+            $data['image'] = $request->file('image')->store('products', 'public');
         }
 
         if (isset($data['name']) && $data['name'] !== $product->name) {

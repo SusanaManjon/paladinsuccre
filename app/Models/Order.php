@@ -12,11 +12,14 @@ class Order extends Model
     protected $fillable = [
         'user_id', 'order_number', 'status', 'total',
         'notes', 'shipping_address', 'phone',
+        'payment_method', 'payment_status', 'transaction_id', 'payment_proof'
     ];
 
     protected $casts = [
         'total' => 'decimal:2',
     ];
+
+    protected $appends = ['payment_proof_url', 'status_label'];
 
     protected static function boot()
     {
@@ -49,5 +52,18 @@ class Order extends Model
             'cancelled'  => 'Cancelado',
             default      => $this->status,
         };
+    }
+
+    public function getPaymentProofUrlAttribute()
+    {
+        if (!$this->payment_proof) {
+            return null;
+        }
+
+        if (\Illuminate\Support\Str::startsWith($this->payment_proof, 'http')) {
+            return $this->payment_proof;
+        }
+
+        return asset('storage/' . $this->payment_proof);
     }
 }
