@@ -1,0 +1,21 @@
+# nixpacks.toml
+# Configuración personalizada para Laravel con Vite en Railway
+
+[phases.setup]
+nixPkgs = ["php82", "nodejs-20_x", "git"]
+
+[phases.install]
+cmds = [
+  "composer install --ignore-platform-reqs --no-interaction --plugins-api-version=2.2.0 --prefer-dist --optimize-autoloader",
+  "npm install"
+]
+
+[phases.build]
+cmds = [
+  "npm run build"
+]
+
+[start]
+# El proveedor de PHP de Nixpacks arranca Nginx automáticamente sirviendo la carpeta public/
+# Pero antes de arrancar, queremos asegurarnos de optimizar Laravel y opcionalmente correr migraciones.
+cmd = "php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan serve --host 0.0.0.0 --port $PORT"
